@@ -28,6 +28,8 @@ public class PaginacionDTO
     public int Pagina { get; set; } = 1;
     public int TamanoPagina { get; set; } = 10;
     public string? Busqueda { get; set; }
+    public bool? Estado { get; set; }
+    public string OrdenarPor { get; set; } = "recientes";
 }
 
 // La respuesta paginada que devuelve la API

@@ -27,10 +27,19 @@ public class ProductoService : IProductoService
                 (p.Descripcion != null && p.Descripcion.ToLower().Contains(busqueda)));
         }
 
+        if (paginacion.Estado.HasValue)
+            query = query.Where(p => p.Estado == paginacion.Estado.Value);
+
+        query = paginacion.OrdenarPor switch
+        {
+            "antiguos" => query.OrderBy(p => p.FechaCreacion),
+            "nombre"   => query.OrderBy(p => p.Nombre),
+            _          => query.OrderByDescending(p => p.FechaCreacion)
+        };
+
         var totalItems = await query.CountAsync();
 
         var items = await query
-            .OrderByDescending(p => p.FechaCreacion)
             .Skip((paginacion.Pagina - 1) * paginacion.TamanoPagina)
             .Take(paginacion.TamanoPagina)
             .Select(p => MapToDto(p))

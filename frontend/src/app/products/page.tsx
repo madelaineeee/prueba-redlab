@@ -2,41 +2,49 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Cookies from "js-cookie";
 import api from "@/lib/api";
-import { Producto, ProductoCreateUpdate, ResultadoPaginado } from "@/types";
-import ProductoModal from "@/components/ProductoModal";
+import { Producto, ResultadoPaginado } from "@/types";
+import Sidebar from "@/components/Sidebar";
+import { Pencil, Trash2, Plus } from "lucide-react";
+import Cookies from "js-cookie";
 
 export default function ProductosPage() {
   const router = useRouter();
   const [productos, setProductos] = useState<Producto[]>([]);
-  const [totalPaginas, setTotalPaginas] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+  const [totalPaginas, setTotalPaginas] = useState(1);
   const [pagina, setPagina] = useState(1);
-  const [busqueda, setBusqueda] = useState("");
   const [busquedaInput, setBusquedaInput] = useState("");
+  const [busqueda, setBusqueda] = useState("");
+  const [estadoFiltro, setEstadoFiltro] = useState("");
+  const [ordenarPor, setOrdenarPor] = useState("recientes");
   const [loading, setLoading] = useState(true);
-  const [modalAbierto, setModalAbierto] = useState(false);
-  const [productoEditando, setProductoEditando] = useState<Producto | null>(null);
   const [eliminandoId, setEliminandoId] = useState<string | null>(null);
-
-  const tamanoPagina = 10;
+  const userEmail = Cookies.get("userEmail");
+  const tamanoPagina = 5;
 
   const cargarProductos = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await api.get<ResultadoPaginado<Producto>>("/productos", {
-        params: { pagina, tamanoPagina, busqueda: busqueda || undefined },
-      });
+      const params: Record<string, string | number | boolean> = {
+        pagina,
+        tamanoPagina,
+        ordenarPor,
+      };
+      if (busqueda) params.busqueda = busqueda;
+      if (estadoFiltro !== "") params.estado = estadoFiltro === "true";
+
+      const { data } = await api.get<ResultadoPaginado<Producto>>(
+        "/productos",
+        { params }
+      );
       setProductos(data.items);
-      setTotalPaginas(data.totalPaginas);
       setTotalItems(data.totalItems);
-    } catch {
-      // Si falla la carga, probablemente el token expiró (el interceptor redirige)
+      setTotalPaginas(data.totalPaginas);
     } finally {
       setLoading(false);
     }
-  }, [pagina, busqueda]);
+  }, [pagina, busqueda, estadoFiltro, ordenarPor]);
 
   useEffect(() => {
     cargarProductos();
@@ -45,21 +53,11 @@ export default function ProductosPage() {
   const handleBuscar = (e: React.FormEvent) => {
     e.preventDefault();
     setBusqueda(busquedaInput);
-    setPagina(1); // Volvemos a la primera página al buscar
-  };
-
-  const handleNuevo = () => {
-    setProductoEditando(null);
-    setModalAbierto(true);
-  };
-
-  const handleEditar = (producto: Producto) => {
-    setProductoEditando(producto);
-    setModalAbierto(true);
+    setPagina(1);
   };
 
   const handleEliminar = async (id: string) => {
-    if (!confirm("¿Estás segura de que quieres eliminar este producto?")) return;
+    if (!confirm("¿Eliminar este producto?")) return;
     setEliminandoId(id);
     try {
       await api.delete(`/productos/${id}`);
@@ -69,149 +67,150 @@ export default function ProductosPage() {
     }
   };
 
-  const handleGuardar = async (data: ProductoCreateUpdate) => {
-    if (productoEditando) {
-      await api.put(`/productos/${productoEditando.id}`, data);
-    } else {
-      await api.post("/productos", data);
-    }
-    cargarProductos();
-  };
-
-  const handleDescargarPDF = async () => {
-    try {
-      const response = await api.get("/reporte/productos", {
-        responseType: "blob", // Indica que la respuesta es un archivo
-      });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", `productos_${Date.now()}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    } catch {
-      alert("Error al generar el reporte.");
-    }
-  };
-
-  const handleCerrarSesion = () => {
-    Cookies.remove("token");
-    Cookies.remove("userEmail");
-    router.push("/login");
-  };
+  const inicio = totalItems === 0 ? 0 : (pagina - 1) * tamanoPagina + 1;
+  const fin = Math.min(pagina * tamanoPagina, totalItems);
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Barra de navegación */}
-      <nav className="bg-white shadow-sm px-6 py-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-800">Gestión de Productos</h1>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-gray-600">
-            {Cookies.get("userEmail")}
-          </span>
-          <button
-            onClick={handleCerrarSesion}
-            className="text-sm text-red-600 hover:underline"
-          >
-            Cerrar sesión
-          </button>
-        </div>
-      </nav>
+    <div className="flex min-h-screen bg-gray-50">
+      <Sidebar />
 
-      <div className="max-w-6xl mx-auto px-4 py-6">
-        {/* Barra de acciones */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-4">
-          <form onSubmit={handleBuscar} className="flex gap-2 flex-1">
+      <main className="flex-1 p-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">Productos</h1>
+            <p className="text-sm text-gray-500">Administra tus productos</p>
+          </div>
+          <span className="text-sm text-gray-500">{userEmail}</span>
+        </div>
+
+        {/* Filtros */}
+        <div className="bg-white rounded-xl shadow-sm p-4 mb-4">
+          <form onSubmit={handleBuscar} className="flex flex-wrap gap-3">
             <input
               type="text"
               value={busquedaInput}
               onChange={(e) => setBusquedaInput(e.target.value)}
-              placeholder="Buscar por nombre o descripción..."
-              className="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Buscar producto..."
+              className="flex-1 min-w-48 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-400"
             />
+            <select
+              value={estadoFiltro}
+              onChange={(e) => {
+                setEstadoFiltro(e.target.value);
+                setPagina(1);
+              }}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            >
+              <option value="">Todos</option>
+              <option value="true">Activo</option>
+              <option value="false">Inactivo</option>
+            </select>
+            <select
+              value={ordenarPor}
+              onChange={(e) => {
+                setOrdenarPor(e.target.value);
+                setPagina(1);
+              }}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            >
+              <option value="recientes">Más recientes</option>
+              <option value="antiguos">Más antiguos</option>
+              <option value="nombre">Nombre A-Z</option>
+            </select>
             <button
               type="submit"
-              className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors"
+              className="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-700 transition-colors"
             >
               Buscar
             </button>
+            <button
+              type="button"
+              onClick={() => router.push("/products/new")}
+              className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700 transition-colors font-medium"
+            >
+              <Plus size={16} />
+              Nuevo producto
+            </button>
           </form>
-
-          <div className="flex gap-2">
-            <button
-              onClick={handleDescargarPDF}
-              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
-            >
-              Descargar PDF
-            </button>
-            <button
-              onClick={handleNuevo}
-              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
-            >
-              + Nuevo Producto
-            </button>
-          </div>
         </div>
 
         {/* Tabla */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="text-left px-4 py-3 font-medium text-gray-900">Nombre</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-900">Descripción</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-900">Precio</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-900">Estado</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-900">Creado por</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-900">Acciones</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-600">Nombre</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-600">Descripción</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-600">Precio</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-600">Estado</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-600">Fecha de creación</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-600">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-8 text-gray-500">
+                  <td colSpan={5} className="text-center py-10 text-gray-400">
                     Cargando...
                   </td>
                 </tr>
               ) : productos.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-8 text-gray-500">
+                  <td colSpan={5} className="text-center py-10 text-gray-400">
                     No hay productos.
                   </td>
                 </tr>
               ) : (
                 productos.map((p) => (
-                  <tr key={p.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium text-gray-800">{p.nombre}</td>
-                    <td className="px-4 py-3 text-gray-600">{p.descripcion || "-"}</td>
-                    <td className="px-4 py-3 text-gray-800">${p.precio.toFixed(2)}</td>
+                  <tr key={p.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3 font-medium text-gray-800">
+                      {p.nombre}
+                    </td>
+                    <td className="px-4 py-3 text-gray-700">
+                      {p.descripcion || "-"}
+                    </td>
+                    <td className="px-4 py-3 text-gray-700">
+                      ${p.precio.toFixed(2)}
+                    </td>
                     <td className="px-4 py-3">
                       <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
                           p.estado
                             ? "bg-green-100 text-green-700"
-                            : "bg-red-100 text-red-700"
+                            : "bg-red-100 text-red-600"
                         }`}
                       >
                         {p.estado ? "Activo" : "Inactivo"}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-gray-600">{p.usuarioCreacion}</td>
+                    <td className="px-4 py-3 text-gray-500">
+                      {new Date(p.fechaCreacion).toLocaleDateString("es-ES", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
                         <button
-                          onClick={() => handleEditar(p)}
-                          className="text-blue-600 hover:underline text-sm"
+                          onClick={() =>
+                            router.push(`/products/${p.id}/edit`)
+                          }
+                          title="Editar"
+                          className="p-1.5 text-amber-500 hover:bg-amber-50 rounded-lg transition-colors"
                         >
-                          Editar
+                          <Pencil size={16} />
                         </button>
                         <button
                           onClick={() => handleEliminar(p.id)}
                           disabled={eliminandoId === p.id}
-                          className="text-red-600 hover:underline text-sm disabled:opacity-50"
+                          title="Eliminar"
+                          className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40"
                         >
-                          {eliminandoId === p.id ? "..." : "Eliminar"}
+                          <Trash2 size={16} />
                         </button>
                       </div>
                     </td>
@@ -223,38 +222,43 @@ export default function ProductosPage() {
         </div>
 
         {/* Paginación */}
-        <div className="flex items-center justify-between mt-4 text-sm text-gray-600">
-          <span>{totalItems} productos en total</span>
-          <div className="flex gap-2">
+        <div className="flex items-center justify-between mt-4 text-sm text-gray-500">
+          <span>
+            Mostrando {inicio} a {fin} de {totalItems} productos
+          </span>
+          <div className="flex gap-1">
             <button
               onClick={() => setPagina((p) => Math.max(p - 1, 1))}
               disabled={pagina === 1}
-              className="px-3 py-1 border rounded-md disabled:opacity-40 hover:bg-gray-50"
+              className="w-8 h-8 flex items-center justify-center border rounded-lg disabled:opacity-40 hover:bg-gray-100"
             >
-              Anterior
+              ‹
             </button>
-            <span className="px-3 py-1">
-              Página {pagina} de {totalPaginas}
-            </span>
+            {Array.from({ length: totalPaginas }, (_, i) => i + 1).map((n) => (
+              <button
+                key={n}
+                onClick={() => setPagina(n)}
+                className={`w-8 h-8 flex items-center justify-center border rounded-lg transition-colors ${
+                  n === pagina
+                    ? "bg-indigo-600 text-white border-indigo-600"
+                    : "hover:bg-gray-100"
+                }`}
+              >
+                {n}
+              </button>
+            ))}
             <button
-              onClick={() => setPagina((p) => Math.min(p + 1, totalPaginas))}
+              onClick={() =>
+                setPagina((p) => Math.min(p + 1, totalPaginas))
+              }
               disabled={pagina === totalPaginas || totalPaginas === 0}
-              className="px-3 py-1 border rounded-md disabled:opacity-40 hover:bg-gray-50"
+              className="w-8 h-8 flex items-center justify-center border rounded-lg disabled:opacity-40 hover:bg-gray-100"
             >
-              Siguiente
+              ›
             </button>
           </div>
         </div>
-      </div>
-
-      {/* Modal de crear/editar */}
-      {modalAbierto && (
-        <ProductoModal
-          producto={productoEditando}
-          onClose={() => setModalAbierto(false)}
-          onSave={handleGuardar}
-        />
-      )}
+      </main>
     </div>
   );
 }

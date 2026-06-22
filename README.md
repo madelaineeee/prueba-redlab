@@ -41,7 +41,7 @@ cd prueba-reblab
 ```
 
 ## 2. Levantar la base de datos
-
+Antes de ejecutar docker compose up -d, asegúrese de que Docker Desktop esté abierto y en ejecución.
 ```bash
 docker compose up -d
 ```

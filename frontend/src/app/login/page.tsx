@@ -24,6 +24,7 @@ export default function LoginPage() {
       const { data } = await api.post<AuthResponse>("/auth/login", { email, password });
       Cookies.set("token", data.token, { expires: 1 });
       Cookies.set("userEmail", data.email, { expires: 1 });
+      Cookies.set("userNombre", data.nombre, { expires: 1 });
       router.push("/products");
     } catch {
       setError("Email o contraseña incorrectos.");

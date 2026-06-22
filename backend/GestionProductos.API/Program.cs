@@ -102,7 +102,7 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate(); // Crea la BD y aplica migraciones si no existen
 
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
-    await DataSeeder.SeedAsync(userManager); // Carga el usuario admin inicial
+    await DataSeeder.SeedAsync(userManager, db); // Carga el usuario admin inicial
 }
 
 // Pipeline de la app

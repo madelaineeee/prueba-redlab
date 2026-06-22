@@ -54,17 +54,20 @@ public class AuthController : ControllerBase
         if (user is null || !await _userManager.CheckPasswordAsync(user, dto.Password))
             return Unauthorized(new { message = "Credenciales incorrectas." });
 
-        var token = GenerarToken(user);
+        var userClaims = await _userManager.GetClaimsAsync(user);
+        var nombre = userClaims.FirstOrDefault(c => c.Type == "NombreCompleto")?.Value ?? user.Email ?? "Usuario";
+        
+        var token = GenerarToken(user, nombre);
 
         return Ok(new AuthResponseDTO
         {
             Token = token,
             Email = user.Email!,
-            Nombre = user.UserName!
+            Nombre = nombre
         });
     }
 
-    private string GenerarToken(IdentityUser user)
+    private string GenerarToken(IdentityUser user, string nombre)
     {
         var jwtKey = _configuration["Jwt:Key"]!;
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
@@ -75,7 +78,8 @@ public class AuthController : ControllerBase
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id),
             new Claim(JwtRegisteredClaimNames.Email, user.Email!),
-            new Claim(ClaimTypes.Name, user.UserName!)
+            new Claim(ClaimTypes.Name, user.UserName!),
+            new Claim("NombreCompleto", nombre)
         };
 
         var token = new JwtSecurityToken(

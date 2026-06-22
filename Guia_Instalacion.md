@@ -91,6 +91,8 @@ cd prueba-redlab
 
 ## Paso 2. Iniciar la base de datos
 
+Antes de ejecutar docker compose up -d, asegúrese de que Docker Desktop esté abierto y en ejecución.
+
 Desde la raíz del proyecto:
 
 ```bash

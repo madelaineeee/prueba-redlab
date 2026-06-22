@@ -28,7 +28,7 @@ Sistema web completo para gestionar productos con autenticación, autorización,
 - Docker & Docker Compose
 - Git
 
-> ⚠️ **Si no tienes nada instalado:** Ver [GUIA_INSTALACION.md](./GUIA_INSTALACION.md) para instrucciones paso a paso.
+> ⚠️ **Si no tienes nada instalado:** Ver [GUIA_INSTALACION.md](./Guia_Instalacion.md) para instrucciones paso a paso.
 ---
 
 # 🚀 Instalación y Ejecución
@@ -41,7 +41,7 @@ cd prueba-reblab
 ```
 
 ## 2. Levantar la base de datos
-
+Antes de ejecutar docker compose up -d, asegúrese de que Docker Desktop esté abierto y en ejecución.
 ```bash
 docker compose up -d
 ```

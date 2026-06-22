@@ -159,7 +159,7 @@ http://localhost:3000
 Credenciales de prueba:
 
 ```text
-Correo: admin@distribuidora.local
+Correo: admin@demo.com
 Contraseña: Admin123!
 ```
 

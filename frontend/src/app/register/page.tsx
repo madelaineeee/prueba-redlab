@@ -25,7 +25,9 @@ export default function RegisterPage() {
       await api.post("/auth/register", { nombre, email, password });
       router.push("/login");
     } catch (err: unknown) {
-      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Error al registrarse.";
+        const errorData = (err as { response?: { data?: { errores?: string[], message?: string } } })?.response?.data;
+        const erroresEspecificos = errorData?.errores?.join(" ");
+        const message = erroresEspecificos || errorData?.message || "Error al registrarse.";
       setError(message);
     } finally {
       setLoading(false);

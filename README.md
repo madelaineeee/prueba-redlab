@@ -15,34 +15,20 @@ Sistema web completo para gestionar productos con autenticación, autorización,
 
 ## 🛠️ Tecnologías
 
-### Backend
+| Componente | Tecnologías |
+|-----------|------------|
+| **Backend** | .NET 8, Entity Framework Core, SQL Server, JWT, QuestPDF |
+| **Frontend** | Next.js 15, TypeScript, Tailwind CSS, Axios, Lucide Icons |
+| **DevOps** | Docker Compose, Git |
 
-- .NET 8 Web API
-- Entity Framework Core
-- SQL Server (Docker)
-- JWT Authentication
-- QuestPDF
-
-### Frontend
-
-- Next.js 15
-- TypeScript
-- Tailwind CSS
-- Axios
-- Lucide Icons
-
-### DevOps
-
-- Docker Compose
-- Git
-
-## 📋 Requisitos
+## 📋 Requisitos Previos
 
 - .NET 8 SDK
 - Node.js 20+
 - Docker & Docker Compose
 - Git
 
+> ⚠️ **Si no tienes nada instalado:** Ver [GUIA_INSTALACION.md](./GUIA_INSTALACION.md) para instrucciones paso a paso.
 ---
 
 # 🚀 Instalación y Ejecución
